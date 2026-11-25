@@ -47,6 +47,7 @@ export interface CheckoutContainerProps {
 }
 
 export interface FormComponentProps {
+  responseMessage: string;
   clothesArticle: ClothingProduct;
   handleOnSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
   handleOnChange: (
@@ -58,8 +59,9 @@ export default function ThriftHappensApp() {
   const [products, setProducts] = useState<ClothingProduct[]>([]);
   const [itemsQuantity, setItemsQuantity] = useState<ItemsQuantity[]>([]);
   const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
+  const [responseMessage, setResponseMessage] = useState<string>("");
   const [clothesArticle, setClothesArticle] = useState<ClothingProduct>({
-    id: 0,
+    id: -1,
     name: "",
     image: "",
     fit: "men",
@@ -75,7 +77,9 @@ export default function ThriftHappensApp() {
   async function getProductsFromDB() {
     try {
       const { data } = await axios.get("http://localhost:3000/data");
-      setProducts(data);
+      setProducts(
+        data.sort((a: ClothingProduct, b: ClothingProduct) => b.id - a.id),
+      );
       setItemsQuantity(
         data.map((product: ClothingProduct) => ({
           id: product.id,
@@ -92,7 +96,9 @@ export default function ThriftHappensApp() {
     async function getProductsFromDB() {
       try {
         const { data } = await axios.get("http://localhost:3000/data");
-        setProducts(data);
+        setProducts(
+          data.sort((a: ClothingProduct, b: ClothingProduct) => b.id - a.id),
+        );
         setItemsQuantity(
           data.map((product: ClothingProduct) => ({
             id: product.id,
@@ -213,9 +219,36 @@ export default function ThriftHappensApp() {
     }));
   }
 
-  function handleOnSubmit(e: SubmitEvent<HTMLFormElement>) {
+  async function handleOnSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
-    return;
+    //If the input on the form is a brand new article
+    //use the POST route to create a new clothing article
+    if (clothesArticle.id === -1) {
+      try {
+        await axios
+          .post("http://localhost:3000/data", {
+            ...clothesArticle,
+            id: parseInt((Math.random() * 10000 + 50).toFixed(0)),
+          })
+          .then((response) => setResponseMessage(response.data.message));
+        await getProductsFromDB();
+        setClothesArticle({
+          id: -1,
+          name: "",
+          image: "",
+          fit: "men",
+          category: "t-shirt",
+          size: "M",
+          color: "",
+          description: "",
+          price: 0,
+          quantity: 0,
+          itemQuantity: 0,
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    }
   }
 
   return (
@@ -235,6 +268,7 @@ export default function ThriftHappensApp() {
           handleEmptyCheckout={handleEmptyCheckout}
         />
         <FormComponent
+          responseMessage={responseMessage}
           clothesArticle={clothesArticle}
           handleOnSubmit={handleOnSubmit}
           handleOnChange={handleOnChange}
